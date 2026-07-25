@@ -1,1 +1,19 @@
-# supabase-selfhost
+# Supabase Self Hosted
+
+Self-hosted Supabase deployment using Docker Compose.
+
+## Requirements
+
+- Ubuntu 22.04/24.04
+- Debian 12
+- Docker
+- 4 CPU cores
+- 8GB RAM recommended
+
+## Install
+
+Clone:
+
+```bash
+git clone https://github.com/hc172808/supabase-selfhost.git
+cd supabase-selfhost
