@@ -1,0 +1,9 @@
+.env
+
+backups/
+
+volumes/db/
+
+volumes/storage/
+
+*.log
