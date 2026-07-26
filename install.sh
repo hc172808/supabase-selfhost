@@ -7,12 +7,71 @@ APP_DIR="/opt/supabase"
 echo "=== Supabase Self Host Installer ==="
 
 apt update
-apt install -y curl openssl git docker-compose-plugin
+apt install -y curl openssl git docker-compose-plugin ufw fail2ban
 
 if ! command -v docker >/dev/null; then
     curl -fsSL https://get.docker.com | sh
 fi
 
+# ── Firewall (UFW) ─────────────────────────────────────────────────────────────
+echo
+echo "=== Configuring firewall (UFW) ==="
+
+ufw --force reset
+
+# Always allow SSH first so we don't lock ourselves out
+ufw allow 22/tcp comment 'SSH'
+
+# Supabase Studio + API gateway (Kong)
+ufw allow 8000/tcp comment 'Supabase Studio / API'
+
+# Deny everything else inbound; allow all outbound
+ufw default deny incoming
+ufw default allow outgoing
+
+ufw --force enable
+echo "UFW enabled. Open ports: 22 (SSH), 8000 (Supabase)"
+
+# ── Fail2ban ───────────────────────────────────────────────────────────────────
+echo
+echo "=== Configuring Fail2ban ==="
+
+# Write a local jail config (overrides defaults without touching /etc originals)
+cat > /etc/fail2ban/jail.local << 'EOF'
+[DEFAULT]
+# Ban for 1 hour after 5 failures within 10 minutes
+bantime  = 3600
+findtime = 600
+maxretry = 5
+backend  = systemd
+
+[sshd]
+enabled  = true
+port     = ssh
+logpath  = %(sshd_log)s
+
+# Protect Supabase Studio/API (Kong) from brute-force HTTP attacks
+[supabase-http]
+enabled  = true
+port     = 8000
+filter   = supabase-http
+logpath  = /var/log/syslog
+maxretry = 20
+bantime  = 3600
+EOF
+
+# Write the Supabase HTTP filter (catches 401/403 spamming)
+cat > /etc/fail2ban/filter.d/supabase-http.conf << 'EOF'
+[Definition]
+failregex = ^.*"(GET|POST|PUT|DELETE|PATCH).*" (401|403) .*$
+ignoreregex =
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+echo "Fail2ban enabled. SSH and Supabase HTTP endpoints are protected."
+
+# ── App setup ─────────────────────────────────────────────────────────────────
 mkdir -p "$APP_DIR"
 
 cp -r . "$APP_DIR"
@@ -21,7 +80,8 @@ cd "$APP_DIR"
 
 if [ ! -f .env ]; then
 
-    echo "Creating .env from .env.example"
+    echo
+    echo "=== Creating .env ==="
 
     cp .env.example .env
 
@@ -57,30 +117,34 @@ if [ ! -f .env ]; then
 
 fi
 
-
-echo "Starting Supabase..."
+# ── Start Supabase ─────────────────────────────────────────────────────────────
+echo
+echo "=== Starting Supabase ==="
 
 docker compose pull
 docker compose up -d
 
-
 echo
 echo "================================="
-echo "Supabase Started!"
+echo "  Supabase is running!"
 echo "================================="
 
 IP=$(hostname -I | awk '{print $1}')
 
 echo
-echo "Studio (Dashboard):"
-echo "  http://$IP:8000"
+echo "  Studio (Dashboard): http://$IP:8000"
+echo "  API URL:            http://$IP:8000"
 echo
-echo "Default dashboard login:"
-echo "  Username: supabase"
-echo "  Password: (see DASHBOARD_PASSWORD in $APP_DIR/.env)"
+echo "  Dashboard login:"
+echo "    Username: supabase"
+echo "    Password: see DASHBOARD_PASSWORD in $APP_DIR/.env"
 echo
-echo "API URL:  http://$IP:8000"
+echo "  Security:"
+echo "    UFW firewall : enabled (SSH + port 8000 open)"
+echo "    Fail2ban     : enabled (SSH + Supabase HTTP protected)"
+echo
 echo "================================================="
-echo "Change DASHBOARD_PASSWORD in $APP_DIR/.env"
-echo "then run: docker compose up -d"
+echo "  ACTION REQUIRED:"
+echo "  Change DASHBOARD_PASSWORD in $APP_DIR/.env"
+echo "  then run:  docker compose up -d"
 echo "================================================="
