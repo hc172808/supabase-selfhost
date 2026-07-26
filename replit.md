@@ -9,11 +9,20 @@ A collection of shell scripts for self-hosting Supabase on a Linux server using 
 - `backup.sh` — dumps the Postgres database to `/opt/supabase/backups/`
 - `scripts/generate-keys.sh` — generates random `POSTGRES_PASSWORD` and `JWT_SECRET` values
 
-## ⚠️ Missing files (repo is incomplete)
-- `docker-compose.yml` — not present; required to run Supabase
-- `.env.example` — not present; referenced by `install.sh`
-
-The official source for these is: https://github.com/supabase/supabase/tree/master/docker
+## Supabase services started by `docker-compose.yml`
+| Service | Description |
+|---|---|
+| Studio | Web dashboard (port 8000) |
+| Kong | API gateway |
+| Auth (GoTrue) | User authentication |
+| REST (PostgREST) | Auto-generated REST API |
+| Realtime | Websocket subscriptions |
+| Storage | File storage |
+| PostgreSQL | Database |
+| Meta | DB management API |
+| Imgproxy | Image transformations |
+| Supavisor | Connection pooler |
+| Logflare/Vector | Logging |
 
 ## Requirements (to run on a real server)
 - Ubuntu 22.04/24.04 or Debian 12
