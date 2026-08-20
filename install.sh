@@ -172,8 +172,35 @@ if [ ! -f .env ]; then
     LOGFLARE_PRIVATE_ACCESS_TOKEN=$(openssl rand -base64 24)
     DASHBOARD_PASSWORD=$(openssl rand -hex 16)
 
+    # Create legacy Supabase API keys signed with this installation's JWT secret.
+    # The keys shipped in .env.example are public demo keys and must never be used.
+    base64url() {
+        openssl base64 -A | tr '+/' '-_' | tr -d '='
+    }
+
+    make_jwt() {
+        local role="$1"
+        local now
+        local header
+        local payload
+        local signature
+
+        now=$(date +%s)
+        header=$(printf '%s' '{"alg":"HS256","typ":"JWT"}' | base64url)
+        payload=$(printf '{"role":"%s","iss":"supabase","iat":%s,"exp":%s}' \
+            "$role" "$now" "$((now + 315360000))" | base64url)
+        signature=$(printf '%s.%s' "$header" "$payload" \
+            | openssl dgst -sha256 -hmac "$JWT_SECRET" -binary | base64url)
+        printf '%s.%s.%s' "$header" "$payload" "$signature"
+    }
+
+    ANON_KEY=$(make_jwt "anon")
+    SERVICE_ROLE_KEY=$(make_jwt "service_role")
+
     sed -i "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$POSTGRES_PASSWORD|" .env
     sed -i "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" .env
+    sed -i "s|ANON_KEY=.*|ANON_KEY=$ANON_KEY|" .env
+    sed -i "s|SERVICE_ROLE_KEY=.*|SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY|" .env
     sed -i "s|SECRET_KEY_BASE=.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|" .env
     sed -i "s|REALTIME_DB_ENC_KEY=.*|REALTIME_DB_ENC_KEY=$REALTIME_DB_ENC_KEY|" .env
     sed -i "s|VAULT_ENC_KEY=.*|VAULT_ENC_KEY=$VAULT_ENC_KEY|" .env
@@ -184,6 +211,8 @@ if [ ! -f .env ]; then
 
     # Public URL → use HTTPS domain
     sed -i "s|SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=https://$DOMAIN|" .env
+    sed -i "s|API_EXTERNAL_URL=.*|API_EXTERNAL_URL=https://$DOMAIN/auth/v1|" .env
+    sed -i "s|SITE_URL=.*|SITE_URL=https://$DOMAIN|" .env
 
     # SMTP via Resend — swap in your API key from resend.com
     sed -i "s|SMTP_HOST=.*|SMTP_HOST=smtp.resend.com|" .env
