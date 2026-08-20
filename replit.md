@@ -79,13 +79,13 @@ docker compose -f /opt/supabase/docker-compose.yml up -d
 
 ```bash
 # View running containers
-docker compose -C /opt/supabase ps
+docker compose --project-directory /opt/supabase ps
 
 # View logs
-docker compose -C /opt/supabase logs -f
+docker compose --project-directory /opt/supabase logs -f
 
 # Restart stack
-docker compose -C /opt/supabase up -d
+docker compose --project-directory /opt/supabase up -d
 
 # Update to latest Supabase version
 cd /opt/supabase && ./update.sh

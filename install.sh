@@ -15,12 +15,16 @@ echo
 # ── Packages ───────────────────────────────────────────────────────────────────
 echo "=== [1/10] Installing packages ==="
 apt update -q
-apt install -y curl openssl git docker-compose-plugin ufw fail2ban \
+apt install -y curl openssl git ca-certificates gnupg ufw fail2ban \
     unattended-upgrades apt-listchanges
 
 # Install Docker if missing
 if ! command -v docker >/dev/null; then
     curl -fsSL https://get.docker.com | sh
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+    apt install -y docker-compose-plugin
 fi
 
 # Install Caddy (HTTPS reverse proxy)
@@ -85,12 +89,11 @@ EOF
 systemctl enable unattended-upgrades
 echo "OS security patches will install automatically"
 
-# ── SSH hardening ──────────────────────────────────────────────────────────────
+# ── SSH safety note ────────────────────────────────────────────────────────────
 echo
 echo "=== [5/10] Hardening SSH ==="
-sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-systemctl restart sshd
-echo "Root SSH login disabled"
+echo "SSH hardening is not applied automatically."
+echo "Confirm a separate sudo user and SSH key are working, then disable root/password login manually."
 
 # ── Firewall (UFW) ─────────────────────────────────────────────────────────────
 echo
@@ -120,25 +123,11 @@ enabled = true
 port    = ssh
 logpath = %(sshd_log)s
 
-# Block IPs hammering Supabase auth endpoints
-[supabase-http]
-enabled  = true
-port     = 80,443
-filter   = supabase-http
-logpath  = /var/log/syslog
-maxretry = 20
-bantime  = 3600
-EOF
-
-cat > /etc/fail2ban/filter.d/supabase-http.conf << 'EOF'
-[Definition]
-failregex = ^.*"(GET|POST|PUT|DELETE|PATCH).*" (401|403) .*$
-ignoreregex =
 EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
-echo "Fail2ban active: SSH + Supabase HTTP endpoints protected"
+echo "Fail2ban active: SSH protected"
 
 # ── HTTPS reverse proxy (Caddy) ────────────────────────────────────────────────
 echo
@@ -159,8 +148,7 @@ $DOMAIN {
 EOF
 
 systemctl enable caddy
-systemctl restart caddy
-echo "Caddy configured — SSL certificate for $DOMAIN will be auto-obtained on first request"
+echo "Caddy configured — SSL certificate for $DOMAIN will be requested after Supabase starts"
 
 # ── App setup ──────────────────────────────────────────────────────────────────
 echo
@@ -255,6 +243,15 @@ echo
 echo "=== Starting Supabase ==="
 docker compose pull
 docker compose up -d
+
+# Start Caddy only after its local upstream exists. Certificate issuance also
+# requires DNS for DOMAIN to point at this server and ports 80/443 to be open.
+if ! caddy validate --config /etc/caddy/Caddyfile; then
+    echo "ERROR: Caddy configuration validation failed." >&2
+    exit 1
+fi
+systemctl restart caddy
+echo "Caddy started — HTTPS certificate will be obtained when DNS is ready"
 
 echo
 echo "╔══════════════════════════════════════════════════════╗"
