@@ -1,18 +1,22 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -e
+set -Eeuo pipefail
+umask 077
 
-BACKUP_DIR="/opt/supabase/backups"
+APP_DIR="/opt/supabase"
+BACKUP_DIR="$APP_DIR/backups"
+DATE="$(date +'%Y-%m-%d_%H-%M-%S')"
+BACKUP="$BACKUP_DIR/database-$DATE.dump"
+TEMP="$BACKUP.tmp"
 
 mkdir -p "$BACKUP_DIR"
+chmod 0700 "$BACKUP_DIR"
+trap 'rm -f "$TEMP"' EXIT
 
-DATE=$(date +"%Y-%m-%d_%H-%M")
+echo "Creating compressed PostgreSQL custom-format backup..."
+docker exec supabase-db pg_dump --username=postgres --dbname=postgres --format=custom > "$TEMP"
+test -s "$TEMP"
+mv "$TEMP" "$BACKUP"
+trap - EXIT
 
-echo "Creating database backup..."
-
-docker exec supabase-db \
-pg_dump -U postgres postgres \
-> "$BACKUP_DIR/database-$DATE.sql"
-
-echo "Backup saved:"
-echo "$BACKUP_DIR/database-$DATE.sql"
+echo "Backup saved: $BACKUP"

@@ -2,8 +2,9 @@
 
 backups/
 
-volumes/db/
+volumes/db/data/
 
-volumes/storage/
+volumes/storage/*
+!volumes/storage/.gitkeep
 
 *.log
