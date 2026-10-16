@@ -8,15 +8,15 @@ For a Proxmox CT, enable `nesting=1,keyctl=1` in CT Features, use systemd as PID
 
 ## Deployment
 
-Run as root inside the CT:
+Run as root inside the CT. For this project's Cloudflare Tunnel setup:
 
 ```bash
-./install.sh supabase.netlifegy.com
+./install.sh supabase.netlifegy.com tunnel
 ```
 
-`install.sh` installs Docker/Caddy, checks that nested Docker can run a test container, securely creates `.env`, validates Compose, starts and health-checks Supabase, then configures scheduled local backups and a health check.
+`install.sh` installs Docker/Caddy, checks that nested Docker can run a test container, securely creates `.env`, validates Compose, starts and health-checks Supabase, then configures scheduled local backups and a health check. Tunnel mode configures Caddy as an HTTP origin; Cloudflare provides visitor HTTPS. It does not configure the Tunnel connector or its Public Hostname.
 
-The Compose file binds Kong and database/pooler ports to loopback. Caddy handles public HTTP/HTTPS. Configure DNS, Cloudflare SSL (Full strict), and Proxmox/router firewall rules separately. Do not rely on UFW inside the CT to filter Docker ports.
+For Tunnel mode, set the Cloudflare Tunnel service to `http://127.0.0.1:80` when `cloudflared` runs on the CT host, or `http://<CT-IP>:80` when it runs elsewhere. No public inbound 80/443 forwarding is needed. The Compose file binds Kong and database/pooler ports to loopback. Direct mode instead uses Caddy for public HTTPS and requires DNS plus inbound TCP 80/443. Do not rely on UFW inside the CT to filter Docker ports.
 
 ## Runtime files
 
@@ -28,4 +28,4 @@ The Compose file binds Kong and database/pooler ports to loopback. Caddy handles
 
 Email sending requires a Resend API key and a verified sender domain in `/opt/supabase/.env`. Backups are local and should be copied off-host for disaster recovery.
 
-The installer cannot create or configure the Proxmox CT, Proxmox firewall, Cloudflare DNS, CT start-at-boot policy, or Resend credentials.
+The installer cannot create or configure the Proxmox CT, Proxmox firewall, Cloudflare DNS/Tunnel, CT start-at-boot policy, or Resend credentials.

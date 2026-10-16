@@ -6,6 +6,11 @@ umask 077
 APP_DIR="/opt/supabase"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DOMAIN="${1:-${SUPABASE_DOMAIN:-supabase.netlifegy.com}}"
+TUNNEL_MODE="${2:-${SUPABASE_CONNECTION_MODE:-}}"
+if [[ -z "$TUNNEL_MODE" && -f "$APP_DIR/.env" ]]; then
+    TUNNEL_MODE="$(sed -n 's/^SUPABASE_CONNECTION_MODE=//p' "$APP_DIR/.env" | head -n1)"
+fi
+TUNNEL_MODE="${TUNNEL_MODE:-direct}"
 
 fail() {
     printf 'ERROR: %s\n' "$*" >&2
@@ -15,12 +20,16 @@ fail() {
 trap 'status=$?; printf "ERROR: installer stopped at line %s (exit %s).\n" "$LINENO" "$status" >&2; exit "$status"' ERR
 
 if [[ "${EUID}" -ne 0 ]]; then
-    fail "Run this inside the Proxmox container as root: sudo ./install.sh [domain]"
+    fail "Run this inside the Proxmox container as root: sudo ./install.sh [domain] [direct|tunnel]"
 fi
 
 if [[ ! "$DOMAIN" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || [[ "$DOMAIN" != *.* ]]; then
     fail "Invalid domain '$DOMAIN'. Pass a hostname such as supabase.example.com."
 fi
+case "$TUNNEL_MODE" in
+    direct|tunnel) ;;
+    *) fail "Invalid connection mode '$TUNNEL_MODE'. Use 'direct' or 'tunnel'." ;;
+esac
 
 for required in docker-compose.yml .env.example backup.sh volumes/api/kong.yml \
     volumes/api/kong-entrypoint.sh volumes/db/jwt.sql volumes/db/roles.sql \
@@ -60,9 +69,10 @@ fi
 echo
 echo "Supabase deployment inside this Linux container"
 echo "Domain: $DOMAIN"
+echo "Connection mode: $TUNNEL_MODE"
 echo "Target: $APP_DIR"
 echo
-echo "Note: this cannot configure the Proxmox host, Cloudflare DNS, or host firewall."
+echo "Note: this cannot configure the Proxmox host, Cloudflare DNS/Tunnel, or host firewall."
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -331,13 +341,21 @@ fi
 set_env SUPABASE_PUBLIC_URL "https://$DOMAIN"
 set_env API_EXTERNAL_URL "https://$DOMAIN/auth/v1"
 set_env SITE_URL "https://$DOMAIN"
+set_env SUPABASE_CONNECTION_MODE "$TUNNEL_MODE"
 set_env KONG_HTTP_PORT "8000"
 set_env KONG_HTTPS_PORT "8443"
 chmod 0600 .env
 
-# Use Caddy for public TLS; Docker's Kong and database ports stay on loopback.
+# Use Caddy as the HTTP origin for a Tunnel, or as the public TLS proxy directly.
+if [[ "$TUNNEL_MODE" == "tunnel" ]]; then
+    # Cloudflare terminates public HTTPS. Explicit http:// prevents Caddy from
+    # redirecting the tunnel's HTTP origin request back to HTTPS.
+    CADDY_SITE="http://$DOMAIN"
+else
+    CADDY_SITE="$DOMAIN"
+fi
 cat > /etc/caddy/Caddyfile <<EOF
-$DOMAIN {
+$CADDY_SITE {
     reverse_proxy 127.0.0.1:8000
     log {
         output file /var/log/caddy/access.log {
@@ -419,23 +437,43 @@ systemctl restart caddy
 systemctl is-active --quiet caddy || fail "Caddy failed to start. Check: journalctl -u caddy -n 100"
 
 https_ready=false
-if getent ahosts "$DOMAIN" >/dev/null 2>&1; then
-    echo "Checking local HTTPS certificate for $DOMAIN (up to 60 seconds)..."
+if [[ "$TUNNEL_MODE" == "tunnel" ]]; then
+    tunnel_origin_ready=false
+    echo "Checking the local HTTP origin for Cloudflare Tunnel (up to 60 seconds)..."
     for _ in $(seq 1 12); do
-        https_status="$(curl --silent --show-error --max-time 5 \
-            --resolve "$DOMAIN:443:127.0.0.1" \
-            --output /dev/null --write-out '%{http_code}' "https://$DOMAIN/" 2>/dev/null || true)"
-        if [[ "$https_status" =~ ^[2-5][0-9][0-9]$ ]]; then
-            https_ready=true
+        origin_status="$(curl --silent --show-error --max-time 5 \
+            --resolve "$DOMAIN:80:127.0.0.1" \
+            --output /dev/null --write-out '%{http_code}' "http://$DOMAIN/" 2>/dev/null || true)"
+        if [[ "$origin_status" =~ ^[2-4][0-9][0-9]$ ]]; then
+            tunnel_origin_ready=true
             break
         fi
         sleep 5
     done
+    if [[ "$tunnel_origin_ready" != true ]]; then
+        journalctl -u caddy -n 50 --no-pager >&2 || true
+        docker compose logs --tail=80 kong >&2 || true
+        fail "Caddy did not return a successful HTTP response from the tunnel origin. Review the logs above."
+    fi
 else
-    echo "WARNING: DNS for $DOMAIN does not resolve yet; Caddy cannot obtain its HTTPS certificate."
-fi
-if [[ "$https_ready" != true ]]; then
-    echo "WARNING: HTTPS certificate is not verified yet. Check Cloudflare DNS, Proxmox/router TCP 80/443 rules, and: journalctl -u caddy"
+    if getent ahosts "$DOMAIN" >/dev/null 2>&1; then
+        echo "Checking local HTTPS certificate for $DOMAIN (up to 60 seconds)..."
+        for _ in $(seq 1 12); do
+            https_status="$(curl --silent --show-error --max-time 5 \
+                --resolve "$DOMAIN:443:127.0.0.1" \
+                --output /dev/null --write-out '%{http_code}' "https://$DOMAIN/" 2>/dev/null || true)"
+            if [[ "$https_status" =~ ^[2-5][0-9][0-9]$ ]]; then
+                https_ready=true
+                break
+            fi
+            sleep 5
+        done
+    else
+        echo "WARNING: DNS for $DOMAIN does not resolve yet; Caddy cannot obtain its HTTPS certificate."
+    fi
+    if [[ "$https_ready" != true ]]; then
+        echo "WARNING: HTTPS certificate is not verified yet. Check Cloudflare DNS, Proxmox/router TCP 80/443 rules, and: journalctl -u caddy"
+    fi
 fi
 
 # Cron is not installed in many minimal Proxmox CT templates.
@@ -482,7 +520,9 @@ chmod 0644 /etc/cron.d/supabase-health
 echo
 echo "Deployment completed inside the Proxmox CT."
 echo "Supabase URL : https://$DOMAIN"
-if [[ "$https_ready" == true ]]; then
+if [[ "$TUNNEL_MODE" == "tunnel" ]]; then
+    echo "HTTPS        : provided at Cloudflare's edge; Caddy uses HTTP as the private tunnel origin"
+elif [[ "$https_ready" == true ]]; then
     echo "HTTPS        : verified locally with Caddy's certificate"
 else
     echo "HTTPS        : pending DNS/network/certificate validation"
@@ -494,9 +534,16 @@ if grep -q '^SMTP_PASS=RESEND_API_KEY_HERE$' .env; then
 fi
 echo
 echo "Before opening the site, make sure:"
-echo "  - Cloudflare DNS for $DOMAIN points/proxies to this CT's public origin."
-echo "  - Cloudflare SSL/TLS mode is Full (strict)."
-echo "  - Proxmox/router firewall permits TCP 80 and 443 to this CT."
+if [[ "$TUNNEL_MODE" == "tunnel" ]]; then
+    echo "  - The Cloudflare Tunnel public hostname is $DOMAIN."
+    echo "  - Set the tunnel service to http://127.0.0.1:80 if cloudflared runs in this CT,"
+    echo "    or http://<CT-IP>:80 if the connector runs elsewhere."
+    echo "  - No inbound 80/443 port forwarding is required for Cloudflare Tunnel."
+else
+    echo "  - Cloudflare DNS for $DOMAIN points/proxies to this CT's public origin."
+    echo "  - Cloudflare SSL/TLS mode is Full (strict)."
+    echo "  - Proxmox/router firewall permits TCP 80 and 443 to this CT."
+fi
 echo "  - Proxmox CT has nesting=1,keyctl=1 and starts automatically on boot."
 echo "  - Configure CT memory/swap and backups on the Proxmox host."
 echo

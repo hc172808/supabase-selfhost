@@ -22,7 +22,24 @@ features: nesting=1,keyctl=1
 
 Do not create a swap file inside the CT. Configure memory and swap limits on the Proxmox host.
 
-### Cloudflare and network
+### Cloudflare Tunnel
+
+For a Cloudflare Tunnel deployment, the installer configures Caddy as a plain-HTTP origin behind Cloudflare. Cloudflare provides HTTPS to visitors; the origin does not need public inbound ports.
+
+Run the installer with Tunnel mode:
+
+```bash
+./install.sh supabase.netlifegy.com tunnel
+```
+
+In Cloudflare Zero Trust, create a Public Hostname for `supabase.netlifegy.com` and set its service to:
+
+- `http://127.0.0.1:80` if `cloudflared` runs directly inside this same CT.
+- `http://<CT-IP>:80` if the tunnel connector runs on another CT or machine that can reach this CT.
+
+If `cloudflared` is running in a Docker container, use the CT's reachable IP rather than `127.0.0.1`. Keep the tunnel connector running and do not forward ports 80 or 443 from the internet to the CT for this setup. The installer cannot create or configure the Cloudflare Tunnel itself. It saves the selected mode in `/opt/supabase/.env`; rerunning the installer without a mode argument retains that choice.
+
+### Direct origin (without Tunnel)
 
 1. Create a Cloudflare DNS `A` record for `supabase.netlifegy.com` pointing to your public origin. Keep the orange-cloud proxy enabled.
 2. Set Cloudflare **SSL/TLS encryption mode** to **Full (strict)**.
@@ -41,10 +58,10 @@ apt-get install -y git
 git clone https://github.com/hc172808/supabase-selfhost.git
 cd supabase-selfhost
 chmod +x install.sh
-./install.sh supabase.netlifegy.com
+./install.sh supabase.netlifegy.com tunnel
 ```
 
-The installer checks that systemd and Docker work, including running a Docker test container. It installs Docker, Caddy, automatic OS security updates, Docker log limits, scheduled database backups, and a health check. It generates unique database, JWT, API, encryption, dashboard, and storage credentials and stores them in `/opt/supabase/.env` with restricted permissions.
+The command above selects Cloudflare Tunnel mode. For a direct public origin instead, run `./install.sh supabase.netlifegy.com direct`. The installer checks that systemd and Docker work, including running a Docker test container. It installs Docker, Caddy, automatic OS security updates, Docker log limits, scheduled database backups, and a health check. It generates unique database, JWT, API, encryption, dashboard, and storage credentials and stores them in `/opt/supabase/.env` with restricted permissions.
 
 If Docker cannot run the test container, stop and correct the Proxmox CT features/storage before retrying. Do not switch to a privileged CT as the first troubleshooting step.
 
@@ -80,6 +97,6 @@ Enable the CT's **Start at boot** option in Proxmox. The installer can enable Do
 ## Limitations
 
 - Run this on a Proxmox CT, not in Replit and not on the Proxmox host.
-- The script does not create the CT, change Proxmox firewall rules, configure Cloudflare DNS, or provide a Resend API key.
+- The script does not create the CT, change Proxmox firewall rules, configure Cloudflare DNS/Tunnel, or provide a Resend API key.
 - Direct PostgreSQL/pooler access is loopback-only by default. Use an SSH tunnel for administration rather than exposing database ports publicly.
 - Test restores from backups before storing important production data.
