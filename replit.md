@@ -16,7 +16,7 @@ Run as root inside the CT. For this project's Cloudflare Tunnel setup:
 
 `install.sh` installs Docker/Caddy, checks that nested Docker can run a test container, securely creates `.env`, validates Compose, starts and health-checks Supabase, then configures scheduled local backups and a health check. Tunnel mode configures Caddy as an HTTP origin; Cloudflare provides visitor HTTPS. It does not configure the Tunnel connector or its Public Hostname.
 
-For Tunnel mode, set the Cloudflare Tunnel service to `http://127.0.0.1:80` when `cloudflared` runs on the CT host, or `http://<CT-IP>:80` when it runs elsewhere. No public inbound 80/443 forwarding is needed. The Compose file binds Kong and database/pooler ports to loopback. Direct mode instead uses Caddy for public HTTPS and requires DNS plus inbound TCP 80/443. Do not rely on UFW inside the CT to filter Docker ports.
+For Tunnel mode, Caddy listens on port 80 and proxies requests to Kong without requiring a specific origin Host header. Set the Cloudflare Tunnel service to `http://127.0.0.1:80` when `cloudflared` runs on the CT host, or `http://<CT-IP>:80` when it runs elsewhere. No public inbound 80/443 forwarding is needed. The Compose file binds Kong and database/pooler ports to loopback. Direct mode instead uses Caddy for public HTTPS and requires DNS plus inbound TCP 80/443. Do not rely on UFW inside the CT to filter Docker ports.
 
 ## Runtime files
 

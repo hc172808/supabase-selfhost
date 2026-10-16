@@ -348,9 +348,9 @@ chmod 0600 .env
 
 # Use Caddy as the HTTP origin for a Tunnel, or as the public TLS proxy directly.
 if [[ "$TUNNEL_MODE" == "tunnel" ]]; then
-    # Cloudflare terminates public HTTPS. Explicit http:// prevents Caddy from
-    # redirecting the tunnel's HTTP origin request back to HTTPS.
-    CADDY_SITE="http://$DOMAIN"
+    # Cloudflare terminates public HTTPS. A port-only site address avoids
+    # automatic HTTPS redirects and does not depend on the origin Host header.
+    CADDY_SITE=":80"
 else
     CADDY_SITE="$DOMAIN"
 fi
