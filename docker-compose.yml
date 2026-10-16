@@ -25,7 +25,7 @@ services:
       timeout: 10s
       interval: 5s
       retries: 3
-      start_period: 20s
+      start_period: 5m
     environment:
       # Listen on all IPv4 interfaces
       HOSTNAME: "0.0.0.0"
@@ -80,7 +80,9 @@ services:
       retries: 5
     depends_on:
       studio:
-        condition: service_healthy
+        # Start the gateway once Studio's process is up; its health endpoint can
+        # remain unavailable while the rest of the stack is initializing.
+        condition: service_started
     ports:
       - "127.0.0.1:${KONG_HTTP_PORT}:8000/tcp"
       - "127.0.0.1:${KONG_HTTPS_PORT}:8443/tcp"
@@ -512,9 +514,11 @@ services:
         "-h",
         "localhost"
         ]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
+      # Initial Supabase migrations can take several minutes on a small CT.
+      start_period: 10m
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}

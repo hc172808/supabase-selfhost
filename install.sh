@@ -359,27 +359,60 @@ echo "Pulling Supabase images and starting the stack..."
 if ! docker compose pull; then
     fail "Image download failed. Check outbound internet/DNS from the CT and try again."
 fi
+
+# On a new deployment, Postgres runs all initialization migrations before
+# accepting connections. Start it separately so the remaining services cannot
+# race its first-boot health checks.
+echo "Starting PostgreSQL first and allowing up to 15 minutes for initialization..."
+if ! docker compose up -d db; then
+    docker compose ps db >&2 || true
+    docker compose logs --tail=200 db >&2 || true
+    fail "PostgreSQL could not start. Review its logs above; do not delete volumes/db/data."
+fi
+db_healthy=false
+for attempt in $(seq 1 180); do
+    db_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' supabase-db 2>/dev/null || true)"
+    if [[ "$db_status" == "healthy" ]]; then
+        db_healthy=true
+        break
+    fi
+    if (( attempt % 6 == 0 )); then
+        echo "PostgreSQL is still initializing (status: ${db_status:-not created}; waited $((attempt * 5)) seconds)..."
+    fi
+    sleep 5
+done
+if [[ "$db_healthy" != true ]]; then
+    docker compose ps db >&2 || true
+    docker compose logs --tail=200 db >&2 || true
+    fail "PostgreSQL did not become healthy within 15 minutes. Review the database logs above; do not delete volumes/db/data."
+fi
+
+echo "PostgreSQL is healthy; starting the remaining Supabase services..."
 if ! docker compose up -d; then
     docker compose ps >&2 || true
-    docker compose logs --tail=100 >&2 || true
+    docker compose logs --tail=200 db studio kong >&2 || true
     fail "Docker Compose could not start the Supabase services. Review the errors above and check the Proxmox CT settings."
 fi
 
-echo "Waiting for PostgreSQL and Kong health checks (up to 6 minutes)..."
+echo "Waiting for PostgreSQL, Studio, and Kong health checks (up to 15 minutes)..."
 healthy=false
-for _ in $(seq 1 180); do
+for attempt in $(seq 1 180); do
     db_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' supabase-db 2>/dev/null || true)"
     kong_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' supabase-kong 2>/dev/null || true)"
-    if [[ "$db_status" == "healthy" && "$kong_status" == "healthy" ]]; then
+    studio_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' supabase-studio 2>/dev/null || true)"
+    if [[ "$db_status" == "healthy" && "$kong_status" == "healthy" && "$studio_status" == "healthy" ]]; then
         healthy=true
         break
     fi
-    sleep 2
+    if (( attempt % 6 == 0 )); then
+        echo "Waiting for health checks (db: ${db_status:-unknown}, studio: ${studio_status:-unknown}, kong: ${kong_status:-unknown}; waited $((attempt * 5)) seconds)..."
+    fi
+    sleep 5
 done
 if [[ "$healthy" != true ]]; then
     docker compose ps >&2 || true
-    docker compose logs --tail=100 db kong >&2 || true
-    fail "Supabase database and API gateway did not become healthy. Review the logs above."
+    docker compose logs --tail=200 db studio kong >&2 || true
+    fail "Supabase database, Studio, and API gateway did not all become healthy within 15 minutes. Review the logs above."
 fi
 
 systemctl restart caddy

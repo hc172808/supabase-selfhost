@@ -1,0 +1,154 @@
+Pulling Supabase images and starting the stack...
+[+] pull 117/125
+ ⠧ Image supabase/postgres:17.6.1.136 [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 367.3MB / 367.3MB Pulling     779.8s
+ ✔ Image postgrest/postgrest:v14.12                                                      Pulled      143.9s
+ ✔ Image kong/kong:3.9.1                                                                 Pulled      543.9s
+ ✔ Image darthsim/imgproxy:v3.30.1                                                       Pulled      674.3s
+ ✔ Image supabase/postgres-meta:v0.96.6                                                  Pulled      735.8s
+ ⠧ Image supabase/supavisor:2.9.5 [⣿⣿⣿⣿⣿⣿⣿⣿] 327.1MB / 327.1MB                           Pulling     779.8s
+ ✔ Image supabase/gotrue:v2.189.0                                                        Pulled      594.2s
+ ⠧ Image supabase/storage-api:v1.60.4 [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 244.1MB / 244.1MB                 Pulling     779.8s
+ ✔ Image supabase/edge-runtime:v1.74.0                                                   Pulled      588.1s
+ ✔ Image supabase/realtime:v2.102.3                                                      Pulled      738.7s
+ ⠧ Image supabase/studio:2026.07.07-sha-a6a04f2 [⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿] 324.5MB / 324.5MB         Pulling     779.8s
+[+] pull 125/125
+ ✔ Image supabase/postgres:17.6.1.136           Pulled                    871.9s
+ ✔ Image postgrest/postgrest:v14.12             Pulled                    143.9s
+ ✔ Image kong/kong:3.9.1                        Pulled                    543.9s
+ ✔ Image darthsim/imgproxy:v3.30.1              Pulled                    674.3s
+ ✔ Image supabase/postgres-meta:v0.96.6         Pulled                    735.8s
+ ✔ Image supabase/supavisor:2.9.5               Pulled                    874.3s
+ ✔ Image supabase/gotrue:v2.189.0               Pulled                    594.2s
+ ✔ Image supabase/storage-api:v1.60.4           Pulled                    965.6s
+ ✔ Image supabase/edge-runtime:v1.74.0          Pulled                    588.1s
+ ✔ Image supabase/realtime:v2.102.3             Pulled                    738.7s
+ ✔ Image supabase/studio:2026.07.07-sha-a6a04f2 Pulled                    854.2s
+[+] up 14/14
+ ✔ Network supabase_default                 Created                         0.5s
+ ✔ Volume supabase_deno-cache               Created                         0.1s
+ ✔ Volume supabase_db-config                Created                         0.2s
+ ✘ Container supabase-db                    Error dependency db failed...  71.6s
+ ✘ Container supabase-studio                Error dependency studio fa...  69.5s
+ ✔ Container supabase-imgproxy              Started                        22.2s
+ ✔ Container supabase-kong                  Created                         7.2s
+ ✔ Container supabase-pooler                Created                         8.4s
+ ✔ Container supabase-meta                  Created                         9.6s
+ ✔ Container supabase-auth                  Created                         9.1s
+ ✔ Container supabase-rest                  Created                         8.3s
+ ✔ Container realtime-dev.supabase-realtime Created                        10.1s
+ ✔ Container supabase-edge-functions        Created                         5.7s
+ ✔ Container supabase-storage               Created                         4.4s
+dependency failed to start: container supabase-studio is unhealthy
+NAME                IMAGE                                    COMMAND                  SERVICE    CREATED              STATUS                      PORTS
+supabase-db         supabase/postgres:17.6.1.136             "docker-entrypoint.s…"   db         About a minute ago   Up 54 seconds (unhealthy)   5432/tcp
+supabase-imgproxy   darthsim/imgproxy:v3.30.1                "entrypoint.sh imgpr…"   imgproxy   About a minute ago   Up 51 seconds (healthy)     8080/tcp
+supabase-studio     supabase/studio:2026.07.07-sha-a6a04f2   "docker-entrypoint.s…"   studio     About a minute ago   Up 48 seconds (unhealthy)   3000/tcp
+supabase-studio  | ▲ Next.js 16.2.6
+supabase-studio  | - Local:         http://localhost:3000
+supabase-studio  | - Network:       http://0.0.0.0:3000
+supabase-studio  | ✓ Ready in 0ms
+supabase-db      | CREATE TABLE
+supabase-db      | INSERT 0 1
+supabase-db      | CREATE TABLE
+supabase-db      | CREATE INDEX
+supabase-db      | CREATE INDEX
+supabase-db      | COMMENT
+supabase-db      | CREATE FUNCTION
+supabase-db      | DO
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | ALTER ROLE
+supabase-db      | ALTER TABLE
+supabase-db      | ALTER TABLE
+supabase-db      | ALTER FUNCTION
+supabase-db      | GRANT ROLE
+supabase-db      | GRANT
+supabase-db      | DO
+supabase-db      | DO
+supabase-db      | CREATE FUNCTION
+supabase-db      | COMMENT
+supabase-db      | DO
+supabase-db      | INSERT 0 1
+supabase-db      | ALTER FUNCTION
+supabase-db      | ALTER FUNCTION
+supabase-db      | REVOKE
+supabase-db      | GRANT
+supabase-db      | COMMIT
+supabase-db      | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
+supabase-db      | ALTER DATABASE
+supabase-db      | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/init-scripts/99-roles.sql
+supabase-db      | ALTER ROLE
+supabase-db      | ALTER ROLE
+supabase-db      | ALTER ROLE
+supabase-db      | ALTER ROLE
+supabase-db      | ALTER ROLE
+supabase-db      | ALTER ROLE
+supabase-db      | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/00-extension.sql
+supabase-db      | psql:/docker-entrypoint-initdb.d/migrations/00-extension.sql:1: NOTICE:  schema "extensions" already exists, skipping
+supabase-db      | CREATE SCHEMA
+supabase-db      | CREATE EXTENSION
+supabase-db      | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/10000000000000_demote-postgres.sql
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | DO
+supabase-db      | ALTER ROLE
+supabase-db      | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20211115181400_update-auth-permissions.sql
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | GRANT
+supabase-db      | ALTER TABLE
+supabase-db      | ALTER TABLE
+supabase-db        | ALTER TABLE
+supabase-db        | ALTER TABLE
+supabase-db        | ALTER TABLE
+supabase-db        | GRANT
+supabase-db        | GRANT
+supabase-imgproxy  | WARNING [2026-10-16T16:51:58Z] No keys defined, so signature checking is disabled 
+supabase-imgproxy  | WARNING [2026-10-16T16:51:58Z] No salts defined, so signature checking is disabled 
+supabase-imgproxy  | WARNING [2026-10-16T16:51:58Z] Exposing root via IMGPROXY_LOCAL_FILESYSTEM_ROOT is unsafe 
+supabase-imgproxy  | INFO    [2026-10-16T16:51:59Z] Starting server at :5001 
+supabase-db        | GRANT
+supabase-db        | GRANT
+supabase-db        | ALTER DEFAULT PRIVILEGES
+supabase-db        | ALTER DEFAULT PRIVILEGES
+supabase-db        | ALTER DEFAULT PRIVILEGES
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20211118015519_create-realtime-schema.sql
+supabase-db        | CREATE SCHEMA
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20211122051245_update-realtime-permissions.sql
+supabase-db        | GRANT
+supabase-db        | GRANT
+supabase-db        | GRANT
+supabase-db        | GRANT
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20211124212715_update-auth-owner.sql
+supabase-db        | DO
+supabase-db        | DO
+supabase-db        | DO
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20211130151719_update-realtime-permissions.sql
+supabase-db        | ALTER DEFAULT PRIVILEGES
+supabase-db        | ALTER DEFAULT PRIVILEGES
+supabase-db        | ALTER DEFAULT PRIVILEGES
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20220118070449_enable-safeupdate-postgrest.sql
+supabase-db        | ALTER ROLE
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20220126121436_finer-postgrest-triggers.sql
+supabase-db        | psql:/docker-entrypoint-initdb.d/migrations/20220126121436_finer-postgrest-triggers.sql:3: NOTICE:  event trigger "api_restart" does not exist, skipping
+supabase-db        | DROP EVENT TRIGGER
+supabase-db        | psql:/docker-entrypoint-initdb.d/migrations/20220126121436_finer-postgrest-triggers.sql:4: NOTICE:  function extensions.notify_api_restart() does not exist, skipping
+supabase-db        | DROP FUNCTION
+supabase-db        | CREATE FUNCTION
+supabase-db        | CREATE FUNCTION
+supabase-db        | psql:/docker-entrypoint-initdb.d/migrations/20220126121436_finer-postgrest-triggers.sql:59: NOTICE:  event trigger "pgrst_ddl_watch" does not exist, skipping
+supabase-db        | DROP EVENT TRIGGER
+supabase-db        | CREATE EVENT TRIGGER
+supabase-db        | psql:/docker-entrypoint-initdb.d/migrations/20220126121436_finer-postgrest-triggers.sql:64: NOTICE:  event trigger "pgrst_drop_watch" does not exist, skipping
+supabase-db        | DROP EVENT TRIGGER
+supabase-db        | CREATE EVENT TRIGGER
+supabase-db        | /docker-entrypoint-initdb.d/migrate.sh: running /docker-entrypoint-initdb.d/migrations/20220224211803_fix-postgrest-supautils.sql
+ERROR: Docker Compose could not start the Supabase services. Review the errors above and check the Proxmox CT settings.
