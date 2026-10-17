@@ -1,0 +1,1 @@
+- [Self-hosted project isolation](self-hosted-project-isolation.md) — Run each independent Supabase project in its own Proxmox CT with a unique hostname.

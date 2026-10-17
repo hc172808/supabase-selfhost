@@ -79,7 +79,26 @@ The self-hosted Studio and Supabase Cloud use different dashboards. `/project` i
 
 Supabase documents that self-hosted Studio represents a single project and does not support adding multiple organizations or projects. This stack labels that one project using `STUDIO_DEFAULT_ORGANIZATION` and `STUDIO_DEFAULT_PROJECT` in `.env`; changing those values changes the displayed names, not the number of projects.
 
-You cannot add your Supabase Cloud projects to this self-hosted Studio. To manage Cloud projects, use [Supabase Cloud Dashboard](https://supabase.com/dashboard/). For multiple independent self-hosted projects, deploy a separate Supabase stack for each one—preferably in separate CTs with distinct hostnames. Do not rerun this install script on the same CT to create another project; this stack uses one Compose project, fixed container names, and one `/opt/supabase` configuration.
+You cannot add your Supabase Cloud projects to this self-hosted Studio. To manage Cloud projects, use [Supabase Cloud Dashboard](https://supabase.com/dashboard/). For multiple independent self-hosted projects, use **one separate Proxmox CT per project**. Do not rerun this install script on the same CT to create another project.
+
+For each additional project:
+
+1. Create a new Debian/Ubuntu CT using the requirements in section 2. Give it a unique, stable LAN IP and enable **Start at boot**.
+2. Inside that new CT, clone this repository and run the installer once with a unique hostname:
+
+   ```bash
+   apt-get update
+   apt-get install -y git
+   git clone https://github.com/hc172808/supabase-selfhost.git
+   cd supabase-selfhost
+   ./install.sh project-two.supabase.netlifegy.com tunnel
+   ```
+
+3. In the existing Cloudflare Tunnel, add a Public Hostname for that hostname. Point it to `http://<PROJECT-TWO-CT-LAN-IP>:80`. Repeat with a different hostname and CT IP for every project.
+4. In Proxmox Firewall, allow the Tunnel connector to reach each CT on TCP 80. If using the optional UFW script, configure it separately inside each CT.
+5. Keep each CT's `.env`, database, storage, and backups separate. The installer generates credentials for a fresh CT; do not copy another CT's `.env` into it.
+
+For example, the existing project can remain at `supabase.netlifegy.com`, while another runs at `project-two.supabase.netlifegy.com`, with each hostname routed to its own CT. This creates new independent Supabase instances; it does not copy or synchronize data from existing Supabase Cloud projects. Migrate each project's database, Auth users, and Storage data separately if you need to move them.
 
 ## 5. Optional CT firewall (UFW)
 
