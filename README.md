@@ -2,6 +2,8 @@
 
 This repository deploys the official Supabase Docker Compose stack **inside a Debian or Ubuntu Proxmox LXC container**. It does not install Supabase on the Proxmox host or configure Proxmox networking/DNS for you.
 
+For the step-by-step Cloudflare Tunnel runbook, separate firewall and Fail2ban scripts, troubleshooting, and API-key guidance, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+
 ## Before running the installer
 
 ### Proxmox CT

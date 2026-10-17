@@ -29,3 +29,5 @@ For Tunnel mode, Caddy listens on port 80 and proxies requests to Kong without r
 Email sending requires a Resend API key and a verified sender domain in `/opt/supabase/.env`. Backups are local and should be copied off-host for disaster recovery.
 
 The installer cannot create or configure the Proxmox CT, Proxmox firewall, Cloudflare DNS/Tunnel, CT start-at-boot policy, or Resend credentials.
+
+`SETUP_GUIDE.md` is the operator runbook. `scripts/setup-firewall.sh` is intentionally separate from the installer because it needs the Tunnel source address and an explicit SSH allow/deny choice; do not run it automatically. `scripts/setup-fail2ban.sh` configures SSH protection when sshd is active. The new ES256/opaque API-key fields remain optional; the Compose setup defaults to legacy keys.
