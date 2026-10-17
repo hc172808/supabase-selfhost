@@ -61,7 +61,7 @@ chmod +x install.sh
 ./install.sh supabase.netlifegy.com tunnel
 ```
 
-The command above selects Cloudflare Tunnel mode. For a direct public origin instead, run `./install.sh supabase.netlifegy.com direct`. The installer checks that systemd and Docker work, including running a Docker test container. It installs Docker, Caddy, automatic OS security updates, Docker log limits, scheduled database backups, and a health check. It generates unique database, JWT, API, encryption, dashboard, and storage credentials and stores them in `/opt/supabase/.env` with restricted permissions.
+The command above selects Cloudflare Tunnel mode. For a direct public origin instead, run `./install.sh supabase.netlifegy.com direct`. The installer checks that systemd and Docker work, including running a Docker test container. It installs Docker, Caddy, automatic OS security updates, Docker log limits, scheduled database backups, and a health check. It also enables a systemd unit that runs `docker compose up -d` after Docker starts. It generates unique database, JWT, API, encryption, dashboard, and storage credentials and stores them in `/opt/supabase/.env` with restricted permissions.
 
 If Docker cannot run the test container, stop and correct the Proxmox CT features/storage before retrying. Do not switch to a privileged CT as the first troubleshooting step.
 
@@ -93,6 +93,12 @@ docker compose up -d
 Daily compressed database backups are stored locally under `/opt/supabase/backups/` and retained for seven days. Copy backups off the Proxmox host for disaster recovery; local backups alone do not protect against host or disk failure.
 
 Enable the CT's **Start at boot** option in Proxmox. The installer can enable Docker inside the CT, but it cannot set Proxmox CT startup policy.
+
+The Compose stack starts automatically after Docker starts inside the CT. To check its systemd unit:
+
+```bash
+systemctl status supabase-compose.service
+```
 
 ## Limitations
 

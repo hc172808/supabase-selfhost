@@ -35,7 +35,8 @@ for required in docker-compose.yml .env.example backup.sh volumes/api/kong.yml \
     volumes/api/kong-entrypoint.sh volumes/db/jwt.sql volumes/db/roles.sql \
     volumes/db/realtime.sql volumes/db/webhooks.sql volumes/db/_supabase.sql \
     volumes/db/logs.sql volumes/db/pooler.sql volumes/pooler/pooler.exs \
-    volumes/functions/main/index.ts volumes/logs/vector.yml; do
+    volumes/functions/main/index.ts volumes/logs/vector.yml \
+    scripts/supabase-compose.service; do
     [[ -f "$SCRIPT_DIR/$required" ]] || fail "Required project file is missing: $required"
 done
 
@@ -432,6 +433,13 @@ if [[ "$healthy" != true ]]; then
     docker compose logs --tail=200 db studio kong >&2 || true
     fail "Supabase database, Studio, and API gateway did not all become healthy within 15 minutes. Review the logs above."
 fi
+
+echo "Configuring the Supabase stack to start with Docker at boot..."
+install -m 0644 scripts/supabase-compose.service /etc/systemd/system/supabase-compose.service
+systemctl daemon-reload
+systemctl enable --now supabase-compose.service
+systemctl is-active --quiet supabase-compose.service \
+    || fail "The Supabase Compose systemd service did not become active."
 
 systemctl restart caddy
 systemctl is-active --quiet caddy || fail "Caddy failed to start. Check: journalctl -u caddy -n 100"
