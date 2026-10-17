@@ -1,0 +1,17 @@
+sudo ss -lntp | grep ':80' || true
+sudo systemctl is-active caddy
+cd /opt/supabase && docker compose ps -a
+LISTEN 0      4096               *:80              *:*    users:(("caddy",pid=616261,fd=7))            
+active
+NAME                             IMAGE                                    COMMAND                  SERVICE     CREATED        STATUS                  PORTS
+realtime-dev.supabase-realtime   supabase/realtime:v2.102.3               "/usr/bin/tini -s -g…"   realtime    14 hours ago   Up 14 hours (healthy)   
+supabase-auth                    supabase/gotrue:v2.189.0                 "auth"                   auth        14 hours ago   Up 14 hours (healthy)   
+supabase-db                      supabase/postgres:17.6.1.136             "docker-entrypoint.s…"   db          14 hours ago   Up 14 hours (healthy)   5432/tcp
+supabase-edge-functions          supabase/edge-runtime:v1.74.0            "edge-runtime start …"   functions   14 hours ago   Created                 
+supabase-imgproxy                darthsim/imgproxy:v3.30.1                "entrypoint.sh imgpr…"   imgproxy    14 hours ago   Up 14 hours (healthy)   8080/tcp
+supabase-kong                    kong/kong:3.9.1                          "/bin/sh /home/kong/…"   kong        14 hours ago   Created                 
+supabase-meta                    supabase/postgres-meta:v0.96.6           "docker-entrypoint.s…"   meta        14 hours ago   Up 14 hours (healthy)   8080/tcp
+supabase-pooler                  supabase/supavisor:2.9.5                 "/usr/bin/tini -s -g…"   supavisor   14 hours ago   Up 14 hours (healthy)   127.0.0.1:5432->5432/tcp, 127.0.0.1:6543->6543/tcp
+supabase-rest                    postgrest/postgrest:v14.12               "postgrest"              rest        14 hours ago   Up 14 hours (healthy)   3000/tcp
+supabase-storage                 supabase/storage-api:v1.60.4             "docker-entrypoint.s…"   storage     14 hours ago   Up 14 hours (healthy)   5000/tcp
+supabase-studio                  supabase/studio:2026.07.07-sha-a6a04f2   "docker-entrypoint.s…"   studio      14 hours ago   Up 14 hours (healthy)   3000/tcp
