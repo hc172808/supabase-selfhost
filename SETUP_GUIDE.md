@@ -73,6 +73,14 @@ The installer:
 
 The installer cannot configure Proxmox, Cloudflare DNS, or the Cloudflare Tunnel connector. It also does not automatically enable UFW: the firewall helper needs your Tunnel server address and an explicit SSH choice.
 
+### Important: self-hosted Studio is one project
+
+The self-hosted Studio and Supabase Cloud use different dashboards. `/project` is a Studio route; Supabase Cloud's `/dashboard` is the management portal for Cloud organizations and projects. The route difference is normal.
+
+Supabase documents that self-hosted Studio represents a single project and does not support adding multiple organizations or projects. This stack labels that one project using `STUDIO_DEFAULT_ORGANIZATION` and `STUDIO_DEFAULT_PROJECT` in `.env`; changing those values changes the displayed names, not the number of projects.
+
+You cannot add your Supabase Cloud projects to this self-hosted Studio. To manage Cloud projects, use [Supabase Cloud Dashboard](https://supabase.com/dashboard/). For multiple independent self-hosted projects, deploy a separate Supabase stack for each one—preferably in separate CTs with distinct hostnames. Do not rerun this install script on the same CT to create another project; this stack uses one Compose project, fixed container names, and one `/opt/supabase` configuration.
+
 ## 5. Optional CT firewall (UFW)
 
 The firewall script changes the CT's **default incoming policy to deny**. Run it only if this CT is dedicated to Supabase. It asks for confirmation, backs up its current UFW configuration, and requires an explicit decision about SSH so it does not silently lock out remote access.
