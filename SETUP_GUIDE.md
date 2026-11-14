@@ -182,6 +182,14 @@ curl -v --connect-timeout 5 http://<SUPABASE-CT-LAN-IP>:80/
 - **Caddy's “Congratulations” welcome page:** Caddy is running its packaged default site instead of the Supabase reverse proxy. The Tunnel reaches the CT, but Caddy's configuration has not been applied or reloaded.
 - **`502 Bad Gateway` with `Server: Caddy`:** the request reached Caddy, but its upstream Kong service at `127.0.0.1:8000` is unavailable. Check `docker compose ps -a`.
 
+If Caddy's reload log says it cannot open `/var/log/caddy/access.log` because of permissions, run the included repair script as root from the project directory:
+
+```bash
+sudo bash scripts/fix-caddy-log-permissions.sh
+```
+
+The script preserves existing log contents, sets the log directory and file permissions for Caddy, validates the Caddyfile, and reloads Caddy (or starts it if it is stopped). The main installer also prepares these permissions on new deployments.
+
 ### Kong is `Created`, but not `Up`
 
 If Postgres and Studio are healthy but `supabase-kong` shows `Created`, start Kong and its dependent Edge Functions service:

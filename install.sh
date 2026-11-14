@@ -36,7 +36,7 @@ for required in docker-compose.yml .env.example backup.sh volumes/api/kong.yml \
     volumes/db/realtime.sql volumes/db/webhooks.sql volumes/db/_supabase.sql \
     volumes/db/logs.sql volumes/db/pooler.sql volumes/pooler/pooler.exs \
     volumes/functions/main/index.ts volumes/logs/vector.yml \
-    scripts/supabase-compose.service; do
+    scripts/supabase-compose.service scripts/fix-caddy-log-permissions.sh; do
     [[ -f "$SCRIPT_DIR/$required" ]] || fail "Required project file is missing: $required"
 done
 
@@ -367,8 +367,7 @@ $CADDY_SITE {
 }
 EOF
 chmod 0644 /etc/caddy/Caddyfile
-install -d -o caddy -g caddy -m 0750 /var/log/caddy
-caddy validate --config /etc/caddy/Caddyfile
+bash "$SCRIPT_DIR/scripts/fix-caddy-log-permissions.sh" --prepare-only
 systemctl enable caddy
 
 echo "Validating resolved Supabase Compose configuration..."
